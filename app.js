@@ -1,25 +1,22 @@
 document.addEventListener('DOMContentLoaded', () => {
     const RAILWAY_HOST = 'nitkigali-production.up.railway.app'; 
   
-    // --- Generate a simple ID for this session ---
-    // This is used to differentiate our messages from our partner's
-    let localUserId = 'guest-' + Math.floor(Math.random() * 100000);
-
     // --- Screen and Button Elements ---
     const findChatBtn = document.getElementById('find-chat-btn');
-    const skipBtn = document.getElementById('skip-btn'); // New button
+    const skipBtn = document.getElementById('skip-btn'); 
     const statusText = document.getElementById('status-text');
     
     const waitingScreen = document.getElementById('waiting-screen');
     const chatScreen = document.getElementById('chat-screen');
     
-    const quitBtn = document.getElementById('quit-btn'); // New button
+    const quitBtn = document.getElementById('quit-btn'); 
     const chatLog = document.getElementById('chat-log');
     const messageInput = document.getElementById('chat-message-input');
     const messageSubmit = document.getElementById('chat-message-submit');
 
     let chatSocket = null;
     let matchmakingSocket = null;
+    let lastMessageSent = ""; // Used to filter out our own echoes
 
     // --- Matchmaking Logic ---
 
@@ -66,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     });
 
-    // --- New Skip Button Logic ---
+    // --- Skip Button Logic ---
     skipBtn.addEventListener('click', () => {
         if (matchmakingSocket && matchmakingSocket.readyState === WebSocket.OPEN) {
             statusText.textContent = 'Skipping...';
@@ -95,16 +92,15 @@ document.addEventListener('DOMContentLoaded', () => {
         chatSocket.onmessage = (e) => {
             const data = JSON.parse(e.data);
             const message = data.message;
-            const sender = data.sender; // Get the sender ID from the server
-
+            
             if (message.startsWith('[')) {
                 // This is a system message
                 addMessageToLog(message, 'system');
-            } else if (sender === localUserId) {
-                // This is our *own* message echoed from the server
-                addMessageToLog(message, 'self');
+            } else if (message === lastMessageSent) {
+                // This is our own echo. Ignore it.
+                lastMessageSent = ""; // Clear the flag
             } else {
-                // This is a message from our partner
+                // This must be from the partner
                 addMessageToLog(message, 'partner');
             }
         };
@@ -119,20 +115,15 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // --- New Quit Button Logic ---
+    // --- Quit Button Logic ---
     quitBtn.addEventListener('click', () => {
         if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
             chatSocket.close();
         }
 
-        // Go back to waiting screen
         chatScreen.classList.add('hidden');
         waitingScreen.classList.remove('hidden');
-
-        // Clear the chat log for the next session
-        chatLog.innerHTML = '';
-
-        // Reset status text
+        chatLog.innerHTML = ''; // Clear chat log
         statusText.textContent = 'Click the button to find a chat partner.';
         findChatBtn.disabled = false;
     });
@@ -156,15 +147,16 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Send the message *with our local user ID*
+        // Send the message (original simple format)
         chatSocket.send(JSON.stringify({
-            'message': message,
-            'sender': localUserId 
+            'message': message
         }));
-
-        // --- We NO LONGER add the message to the log here ---
-        // We wait for the server to send it back to us in onmessage
         
+        // Store message to check for echo
+        lastMessageSent = message;
+
+        // Add our own message to the log *immediately*
+        addMessageToLog(message, 'self');
         messageInput.value = '';
     }
 
@@ -172,7 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function addMessageToLog(message, type) {
         const messageElement = document.createElement('div');
-        messageElement.classList.add('chat-message', type); // 'system', 'self', or 'partner'
+        messageElement.classList.add('chat-message', type); 
         
         const textElement = document.createElement('p');
         textElement.textContent = message;
@@ -180,7 +172,6 @@ document.addEventListener('DOMContentLoaded', () => {
         messageElement.appendChild(textElement);
         chatLog.appendChild(messageElement);
 
-        // Auto-scroll to the bottom
         chatLog.scrollTop = chatLog.scrollHeight;
     }
 });
