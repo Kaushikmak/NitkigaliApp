@@ -23,8 +23,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     findChatBtn.addEventListener('click', () => {
         statusText.textContent = 'Connecting to matchmaking...';
-        findChatBtn.disabled = true;
-        findChatBtn.classList.add('hidden'); // Hide Find button
+        findChatBtn.disabled = true;  // Disable find button
+        skipBtn.classList.remove('hidden'); // Show Skip button
         
         isSkipping = false; // Reset skip flag
         
@@ -33,7 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         matchmakingSocket.onopen = () => {
             statusText.textContent = 'Waiting for a partner...';
-            skipBtn.classList.remove('hidden'); // Show Skip button
         };
 
         matchmakingSocket.onmessage = (e) => {
@@ -62,7 +61,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 findChatBtn.click();
             } else {
                 // Otherwise, just reset the UI
-                findChatBtn.classList.remove('hidden');
                 findChatBtn.disabled = false;
             }
         };
@@ -71,6 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Matchmaking socket error:', e);
             statusText.textContent = 'Error connecting to matchmaking. Check console.';
             skipBtn.classList.add('hidden');
+            findChatBtn.disabled = false; // Re-enable on error
         };
     });
 
@@ -134,7 +133,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Reset waiting screen
         statusText.textContent = 'Click the button to find a chat partner.';
-        findChatBtn.classList.remove('hidden');
         findChatBtn.disabled = false;
         skipBtn.classList.add('hidden');
     });
