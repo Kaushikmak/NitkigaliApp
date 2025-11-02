@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="app-container">
+        
+        <div id="waiting-screen">
+            <h1>Find a Chat</h1>
+            <button id="find-chat-btn">Find Partner</button>
+            <p id="status-text">Click the button to find a chat partner.</p>
+        </div>
+
+        <div id="chat-screen" class="hidden">
+            <h1>Chat Room</h1>
+            <div id="chat-log">
+                </div>
+            <div id="chat-input-container">
+                <input type="text" id="chat-message-input" placeholder="Type a message...">
+                <button id="chat-message-submit">Send</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
