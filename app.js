@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
     // --- Screen and Button Elements ---
     const findChatBtn = document.getElementById('find-chat-btn');
-    const skipBtn = document.getElementById('skip-btn'); 
+    const skipBtn = document.getElementById('skip-btn'); // Now on chat screen
     const statusText = document.getElementById('status-text');
     
     const waitingScreen = document.getElementById('waiting-screen');
@@ -16,17 +16,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let chatSocket = null;
     let matchmakingSocket = null;
-    let lastMessageSent = ""; // Used to filter out our own echoes
-    let isSkipping = false;   // Used to manage skip button logic
+    let lastMessageSent = ""; 
+    let manuallyQuit = false; // Flag to prevent auto-reconnect on "Quit"
 
     // --- Matchmaking Logic ---
 
     findChatBtn.addEventListener('click', () => {
         statusText.textContent = 'Connecting to matchmaking...';
         findChatBtn.disabled = true;  // Disable find button
-        skipBtn.classList.remove('hidden'); // Show Skip button
-        
-        isSkipping = false; // Reset skip flag
+        // No more skip button logic here
         
         const matchmakingUrl = `wss://${RAILWAY_HOST}/ws/find_chat/`;
         matchmakingSocket = new WebSocket(matchmakingUrl);
@@ -46,39 +44,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 const roomName = data.room_name;
                 statusText.textContent = `Partner found! Joining room: ${roomName}`;
                 
-                skipBtn.classList.add('hidden'); // Hide skip button
                 matchmakingSocket.close();
                 connectToChatRoom(roomName);
             }
         };
 
         matchmakingSocket.onclose = () => {
-            statusText.textContent = 'Matchmaking connection closed.';
-            skipBtn.classList.add('hidden'); // Hide skip button
-
-            if (isSkipping) {
-                // If we are skipping, immediately click "Find" again
-                findChatBtn.click();
-            } else {
-                // Otherwise, just reset the UI
-                findChatBtn.disabled = false;
+            // Only re-enable the button if we didn't find a match
+            if (!chatSocket || chatSocket.readyState !== WebSocket.OPEN) {
+                 statusText.textContent = 'Matchmaking connection closed.';
+                 findChatBtn.disabled = false;
             }
         };
 
         matchmakingSocket.onerror = (e) => {
             console.error('Matchmaking socket error:', e);
             statusText.textContent = 'Error connecting to matchmaking. Check console.';
-            skipBtn.classList.add('hidden');
-            findChatBtn.disabled = false; // Re-enable on error
+            findChatBtn.disabled = false;
         };
     });
 
-    // --- Skip Button Logic ---
+    // --- New Skip Button Logic (for CHAT screen) ---
     skipBtn.addEventListener('click', () => {
-        if (matchmakingSocket && matchmakingSocket.readyState === WebSocket.OPEN) {
-            statusText.textContent = 'Skipping...';
-            isSkipping = true; // Set flag
-            matchmakingSocket.close(); // This will trigger 'onclose'
+        if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+            manuallyQuit = false; // We WANT to reconnect
+            addMessageToLog('[Skipping...]', 'system');
+            chatSocket.close();
         }
     });
 
@@ -86,8 +77,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Chat Room Logic ---
 
     function connectToChatRoom(roomName) {
+        manuallyQuit = false; // Reset flag for new chat
         waitingScreen.classList.add('hidden');
         chatScreen.classList.remove('hidden');
+        skipBtn.classList.remove('hidden'); // Show skip button
         messageInput.focus();
 
         const chatUrl = `wss://${RAILWAY_HOST}/ws/chat/${roomName}/`;
@@ -104,15 +97,33 @@ document.addEventListener('DOMContentLoaded', () => {
             if (message.startsWith('[')) {
                 addMessageToLog(message, 'system');
             } else if (message === lastMessageSent) {
-                // This is our echo. Ignore it.
                 lastMessageSent = ""; // Clear the flag
             } else {
                 addMessageToLog(message, 'partner');
             }
         };
 
+        // --- AUTO-RECONNECT LOGIC ---
         chatSocket.onclose = () => {
-            addMessageToLog('[You have been disconnected]', 'system');
+            skipBtn.classList.add('hidden'); // Hide skip button on close
+
+            if (manuallyQuit) {
+                // User clicked "Quit". The quitBtn handler resets the UI.
+                addMessageToLog('[You have disconnected]', 'system');
+            } else {
+                // Partner disconnected OR user clicked "Skip"
+                addMessageToLog('[Partner disconnected. Finding new chat...]', 'system');
+                
+                // Wait 2 seconds so user can read the message
+                setTimeout(() => {
+                    chatScreen.classList.add('hidden');
+                    waitingScreen.classList.remove('hidden');
+                    chatLog.innerHTML = ''; // Clear chat
+                    
+                    // Automatically find a new chat
+                    findChatBtn.click();
+                }, 2000); 
+            }
         };
 
         chatSocket.onerror = (e) => {
@@ -121,17 +132,18 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // --- Quit Button Logic ---
+    // --- Quit Button Logic (Updated) ---
     quitBtn.addEventListener('click', () => {
+        manuallyQuit = true; // Set flag to PREVENT auto-reconnect
         if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
             chatSocket.close();
         }
 
+        // Manually reset UI immediately
         chatScreen.classList.add('hidden');
         waitingScreen.classList.remove('hidden');
         chatLog.innerHTML = ''; // Clear chat log
         
-        // Reset waiting screen
         statusText.textContent = 'Click the button to find a chat partner.';
         findChatBtn.disabled = false;
         skipBtn.classList.add('hidden');
@@ -139,7 +151,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // --- Sending Messages ---
-
     messageSubmit.addEventListener('click', () => {
         sendMessage();
     });
@@ -160,8 +171,8 @@ document.addEventListener('DOMContentLoaded', () => {
             'message': message
         }));
         
-        lastMessageSent = message; // Store message to check for echo
-        addMessageToLog(message, 'self'); // Add to log immediately
+        lastMessageSent = message; 
+        addMessageToLog(message, 'self'); 
         messageInput.value = '';
     }
 

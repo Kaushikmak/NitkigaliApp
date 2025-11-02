@@ -10,44 +10,37 @@ html {
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background-color: #121212; /* Dark background */
+    background-color: #121212;
     color: #e0e0e0;
     margin: 0;
-    /* Removed flex properties for mobile-first */
 }
 
 #app-container {
     width: 100%;
     max-width: 500px;
-    background-color: #1e1e1e; /* Darker card */
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    background-color: #1e1e1e;
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    margin: 0 auto; /* Center horizontally */
-    
-    /* --- KEYBOARD FIX --- */
-    /* This makes the container fill the "dynamic" viewport */
-    /* It will shrink when the keyboard appears */
-    height: 100vh; /* Fallback */
+    margin: 0 auto;
+    height: 100vh;
     height: 100dvh; 
 }
 
-/* On desktop, re-add flex centering to body and size down the app */
 @media (min-width: 501px) {
     body {
         display: flex;
         justify-content: center;
         align-items: center;
         padding: 20px;
-        height: 100vh; /* Use 100vh on desktop */
+        height: 100vh;
     }
     #app-container {
-        /* Override mobile height */
         height: 90vh;
         max-height: 700px;
         border-radius: 12px;
-        border: 1px solid #333;
+        border: 1px solid #3a3a3c;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     }
 }
 
@@ -76,7 +69,7 @@ body {
     margin-top: 10px;
 }
 
-#find-chat-btn, #skip-btn {
+#find-chat-btn {
     border: none;
     padding: 12px 20px;
     font-size: 16px;
@@ -86,11 +79,10 @@ body {
     transition: background-color 0.2s, transform 0.1s, opacity 0.2s;
 }
 
-#find-chat-btn:active, #skip-btn:active {
+#find-chat-btn:active {
     transform: scale(0.98);
 }
 
-/* Style for disabled Find button */
 #find-chat-btn:disabled {
     background-color: #555;
     color: #999;
@@ -105,18 +97,9 @@ body {
     background-color: #0056b3;
 }
 
-#skip-btn {
-    background-color: #ff9500; 
-    color: white;
-}
-#skip-btn:hover {
-    background-color: #c77400;
-}
-
-
 #status-text {
     margin-top: 20px;
-    color: #8e8e93; /* Lighter gray */
+    color: #8e8e93;
     font-size: 14px;
 }
 
@@ -124,34 +107,51 @@ body {
 #chat-screen {
     display: flex;
     flex-direction: column;
-    /* height: 100% is implied by flex-grow */
     flex-grow: 1; 
-    /* This is important to contain the children */
     overflow: hidden; 
 }
 
-/* Centered Title Layout */
+/* Updated Chat Header */
 #chat-header {
     display: grid;
-    grid-template-columns: 1fr auto 1fr;
+    /* New 3-column layout */
+    grid-template-columns: auto 1fr auto; 
     align-items: center;
     padding: 15px 20px;
     border-bottom: 1px solid #3a3a3c;
     background-color: #1e1e1e;
-    /* Prevent header from shrinking */
     flex-shrink: 0;
 }
 
 #chat-header h1 {
-    grid-column: 2;
+    grid-column: 2; /* Center column */
     text-align: center;
     margin: 0;
     font-size: 20px;
     color: #ffffff;
 }
 
+/* New Skip Button Style for Header */
+#skip-btn {
+    grid-column: 1; /* Left column */
+    justify-self: start;
+    
+    background-color: #ff9500; 
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+#skip-btn:hover {
+    background-color: #c77400;
+}
+
 #quit-btn {
-    grid-column: 3;
+    grid-column: 3; /* Right column */
     justify-self: end; 
     
     background-color: #ff3b30;
@@ -170,7 +170,6 @@ body {
 
 
 #chat-log {
-    /* This will now shrink when keyboard appears */
     flex-grow: 1; 
     padding: 20px;
     overflow-y: auto;
@@ -219,7 +218,6 @@ body {
     padding: 15px 20px;
     border-top: 1px solid #3a3a3c;
     background-color: #1e1e1e;
-    /* Prevent input bar from shrinking */
     flex-shrink: 0; 
 }
 
