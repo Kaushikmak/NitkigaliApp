@@ -1,11 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const RAILWAY_HOST = 'https://nitkigali.onrender.com'; 
+    const RAILWAY_HOST = 'nitkigali-production.up.railway.app'; 
   
 
 
-    if (RAILWAY_HOST === 'your-railway-app-url.up.railway.app') {
-        alert('Please open app.js and set the RAILWAY_HOST variable to your Railway app domain!');
-    }
+    
 
     const findChatBtn = document.getElementById('find-chat-btn');
     const statusText = document.getElementById('status-text');
@@ -68,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Chat Room Logic ---
 
     function connectToChatRoom(roomName) {
-        // Show the chat screenhttps://nitkighttps://nitkigali.onrender.comali.onrender.com
+        // Show the chat screenhttps://nitkigali.onrender.com
         waitingScreen.classList.add('hidden');
         chatScreen.classList.remove('hidden');
 
