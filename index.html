@@ -12,12 +12,18 @@
         
         <div id="waiting-screen">
             <h1>Find a Chat</h1>
-            <button id="find-chat-btn">Find Partner</button>
+            <div>
+                <button id="find-chat-btn">Find Partner</button>
+                <button id="skip-btn" class="hidden">Skip</button>
+            </div>
             <p id="status-text">Click the button to find a chat partner.</p>
         </div>
 
         <div id="chat-screen" class="hidden">
-            <h1>Chat Room</h1>
+            <div id="chat-header">
+                <h1>Chat Room</h1>
+                <button id="quit-btn">Quit</button>
+            </div>
             <div id="chat-log">
                 </div>
             <div id="chat-input-container">

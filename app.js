@@ -1,16 +1,19 @@
 document.addEventListener('DOMContentLoaded', () => {
     const RAILWAY_HOST = 'nitkigali-production.up.railway.app'; 
   
+    // --- Generate a simple ID for this session ---
+    // This is used to differentiate our messages from our partner's
+    let localUserId = 'guest-' + Math.floor(Math.random() * 100000);
 
-
-    
-
+    // --- Screen and Button Elements ---
     const findChatBtn = document.getElementById('find-chat-btn');
+    const skipBtn = document.getElementById('skip-btn'); // New button
     const statusText = document.getElementById('status-text');
     
     const waitingScreen = document.getElementById('waiting-screen');
     const chatScreen = document.getElementById('chat-screen');
     
+    const quitBtn = document.getElementById('quit-btn'); // New button
     const chatLog = document.getElementById('chat-log');
     const messageInput = document.getElementById('chat-message-input');
     const messageSubmit = document.getElementById('chat-message-submit');
@@ -22,14 +25,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     findChatBtn.addEventListener('click', () => {
         statusText.textContent = 'Connecting to matchmaking...';
+        findChatBtn.disabled = true;
         
-        // Connect to the matchmaking WebSocket
         const matchmakingUrl = `wss://${RAILWAY_HOST}/ws/find_chat/`;
         matchmakingSocket = new WebSocket(matchmakingUrl);
 
         matchmakingSocket.onopen = () => {
             statusText.textContent = 'Waiting for a partner...';
-            findChatBtn.disabled = true;
+            skipBtn.classList.remove('hidden'); // Show skip button
         };
 
         matchmakingSocket.onmessage = (e) => {
@@ -39,13 +42,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 statusText.textContent = 'Waiting for a partner...';
             }
 
-            // --- Redirect Received ---
-            // The backend found a match and is redirecting us to a room
             if (data.type === 'redirect') {
                 const roomName = data.room_name;
                 statusText.textContent = `Partner found! Joining room: ${roomName}`;
                 
-                // Close the matchmaking socket and connect to the chat room
+                skipBtn.classList.add('hidden'); // Hide skip button
                 matchmakingSocket.close();
                 connectToChatRoom(roomName);
             }
@@ -54,23 +55,35 @@ document.addEventListener('DOMContentLoaded', () => {
         matchmakingSocket.onclose = () => {
             statusText.textContent = 'Matchmaking connection closed.';
             findChatBtn.disabled = false;
+            skipBtn.classList.add('hidden'); // Hide skip button
         };
 
         matchmakingSocket.onerror = (e) => {
             console.error('Matchmaking socket error:', e);
             statusText.textContent = 'Error connecting to matchmaking. Check console.';
             findChatBtn.disabled = false;
+            skipBtn.classList.add('hidden'); // Hide skip button
         };
     });
+
+    // --- New Skip Button Logic ---
+    skipBtn.addEventListener('click', () => {
+        if (matchmakingSocket && matchmakingSocket.readyState === WebSocket.OPEN) {
+            statusText.textContent = 'Skipping...';
+            matchmakingSocket.close();
+            // Re-trigger the find chat logic
+            findChatBtn.click();
+        }
+    });
+
 
     // --- Chat Room Logic ---
 
     function connectToChatRoom(roomName) {
-        // Show the chat screenhttps://nitkigali.onrender.com
         waitingScreen.classList.add('hidden');
         chatScreen.classList.remove('hidden');
+        messageInput.focus();
 
-        // Connect to the chat room WebSocket
         const chatUrl = `wss://${RAILWAY_HOST}/ws/chat/${roomName}/`;
         chatSocket = new WebSocket(chatUrl);
 
@@ -78,17 +91,20 @@ document.addEventListener('DOMContentLoaded', () => {
             addMessageToLog('Connected to chat room.', 'system');
         };
 
-        // --- Message Received ---
+        // --- Message Received (ECHO FIX) ---
         chatSocket.onmessage = (e) => {
             const data = JSON.parse(e.data);
             const message = data.message;
-            
-            // Differentiate between system messages, partner messages, and our own
+            const sender = data.sender; // Get the sender ID from the server
+
             if (message.startsWith('[')) {
+                // This is a system message
                 addMessageToLog(message, 'system');
+            } else if (sender === localUserId) {
+                // This is our *own* message echoed from the server
+                addMessageToLog(message, 'self');
             } else {
-                // In this simple setup, we assume we didn't send it.
-                // A more robust app would check a user ID.
+                // This is a message from our partner
                 addMessageToLog(message, 'partner');
             }
         };
@@ -103,7 +119,26 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // --- Sending Messages ---
+    // --- New Quit Button Logic ---
+    quitBtn.addEventListener('click', () => {
+        if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+            chatSocket.close();
+        }
+
+        // Go back to waiting screen
+        chatScreen.classList.add('hidden');
+        waitingScreen.classList.remove('hidden');
+
+        // Clear the chat log for the next session
+        chatLog.innerHTML = '';
+
+        // Reset status text
+        statusText.textContent = 'Click the button to find a chat partner.';
+        findChatBtn.disabled = false;
+    });
+
+
+    // --- Sending Messages (ECHO FIX) ---
 
     messageSubmit.addEventListener('click', () => {
         sendMessage();
@@ -121,13 +156,15 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Send the message to the WebSocket
+        // Send the message *with our local user ID*
         chatSocket.send(JSON.stringify({
-            'message': message
+            'message': message,
+            'sender': localUserId 
         }));
 
-        // Add our own message to the log
-        addMessageToLog(message, 'self');
+        // --- We NO LONGER add the message to the log here ---
+        // We wait for the server to send it back to us in onmessage
+        
         messageInput.value = '';
     }
 
