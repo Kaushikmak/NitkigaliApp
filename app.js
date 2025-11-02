@@ -17,19 +17,23 @@ document.addEventListener('DOMContentLoaded', () => {
     let chatSocket = null;
     let matchmakingSocket = null;
     let lastMessageSent = ""; // Used to filter out our own echoes
+    let isSkipping = false;   // Used to manage skip button logic
 
     // --- Matchmaking Logic ---
 
     findChatBtn.addEventListener('click', () => {
         statusText.textContent = 'Connecting to matchmaking...';
         findChatBtn.disabled = true;
+        findChatBtn.classList.add('hidden'); // Hide Find button
+        
+        isSkipping = false; // Reset skip flag
         
         const matchmakingUrl = `wss://${RAILWAY_HOST}/ws/find_chat/`;
         matchmakingSocket = new WebSocket(matchmakingUrl);
 
         matchmakingSocket.onopen = () => {
             statusText.textContent = 'Waiting for a partner...';
-            skipBtn.classList.remove('hidden'); // Show skip button
+            skipBtn.classList.remove('hidden'); // Show Skip button
         };
 
         matchmakingSocket.onmessage = (e) => {
@@ -51,15 +55,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
         matchmakingSocket.onclose = () => {
             statusText.textContent = 'Matchmaking connection closed.';
-            findChatBtn.disabled = false;
             skipBtn.classList.add('hidden'); // Hide skip button
+
+            if (isSkipping) {
+                // If we are skipping, immediately click "Find" again
+                findChatBtn.click();
+            } else {
+                // Otherwise, just reset the UI
+                findChatBtn.classList.remove('hidden');
+                findChatBtn.disabled = false;
+            }
         };
 
         matchmakingSocket.onerror = (e) => {
             console.error('Matchmaking socket error:', e);
             statusText.textContent = 'Error connecting to matchmaking. Check console.';
-            findChatBtn.disabled = false;
-            skipBtn.classList.add('hidden'); // Hide skip button
+            skipBtn.classList.add('hidden');
         };
     });
 
@@ -67,9 +78,8 @@ document.addEventListener('DOMContentLoaded', () => {
     skipBtn.addEventListener('click', () => {
         if (matchmakingSocket && matchmakingSocket.readyState === WebSocket.OPEN) {
             statusText.textContent = 'Skipping...';
-            matchmakingSocket.close();
-            // Re-trigger the find chat logic
-            findChatBtn.click();
+            isSkipping = true; // Set flag
+            matchmakingSocket.close(); // This will trigger 'onclose'
         }
     });
 
@@ -85,22 +95,19 @@ document.addEventListener('DOMContentLoaded', () => {
         chatSocket = new WebSocket(chatUrl);
 
         chatSocket.onopen = () => {
-            addMessageToLog('Connected to chat room.', 'system');
+            addMessageToLog('Connected.', 'system');
         };
 
-        // --- Message Received (ECHO FIX) ---
         chatSocket.onmessage = (e) => {
             const data = JSON.parse(e.data);
             const message = data.message;
             
             if (message.startsWith('[')) {
-                // This is a system message
                 addMessageToLog(message, 'system');
             } else if (message === lastMessageSent) {
-                // This is our own echo. Ignore it.
+                // This is our echo. Ignore it.
                 lastMessageSent = ""; // Clear the flag
             } else {
-                // This must be from the partner
                 addMessageToLog(message, 'partner');
             }
         };
@@ -124,12 +131,16 @@ document.addEventListener('DOMContentLoaded', () => {
         chatScreen.classList.add('hidden');
         waitingScreen.classList.remove('hidden');
         chatLog.innerHTML = ''; // Clear chat log
+        
+        // Reset waiting screen
         statusText.textContent = 'Click the button to find a chat partner.';
+        findChatBtn.classList.remove('hidden');
         findChatBtn.disabled = false;
+        skipBtn.classList.add('hidden');
     });
 
 
-    // --- Sending Messages (ECHO FIX) ---
+    // --- Sending Messages ---
 
     messageSubmit.addEventListener('click', () => {
         sendMessage();
@@ -147,21 +158,16 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Send the message (original simple format)
         chatSocket.send(JSON.stringify({
             'message': message
         }));
         
-        // Store message to check for echo
-        lastMessageSent = message;
-
-        // Add our own message to the log *immediately*
-        addMessageToLog(message, 'self');
+        lastMessageSent = message; // Store message to check for echo
+        addMessageToLog(message, 'self'); // Add to log immediately
         messageInput.value = '';
     }
 
     // --- UI Helper Function ---
-
     function addMessageToLog(message, type) {
         const messageElement = document.createElement('div');
         messageElement.classList.add('chat-message', type); 
