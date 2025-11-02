@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const RAILWAY_HOST = 'web-production-83699.up.railway.app'; 
+    const RAILWAY_HOST = 'https://nitkigali.onrender.com'; 
   
 
 
@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Chat Room Logic ---
 
     function connectToChatRoom(roomName) {
-        // Show the chat screen
+        // Show the chat screenhttps://nitkighttps://nitkigali.onrender.comali.onrender.com
         waitingScreen.classList.add('hidden');
         chatScreen.classList.remove('hidden');
 
